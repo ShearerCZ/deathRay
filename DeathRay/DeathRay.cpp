@@ -9,11 +9,6 @@
 
 using namespace cv;
 
-void btCallback(int state, void* userdata)
-{
-	std::cout << "I hit the button :)" << std::endl;
-}
-
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//init camera 
