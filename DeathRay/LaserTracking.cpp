@@ -345,69 +345,6 @@ int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bo
 	return 0;
 }
 
-int LaserTracking::CalibrateUniform(ServoCtrl controller)
-{
-	int thresholdLevelL = DEFAULT_THRESHOLD_DAY;
-	if (!day) thresholdLevelL = DEFAULT_THRESHOLD_NIGHT_LOW;
-	int thresholdLevelH = 255;
-	if (!day)  thresholdLevelH = DEFAULT_THRESHOLD_NIGHT_HIGH;
-	//null check 
-	if (!cam.isOpened())  // if not success, exit program
-	{
-		cout << "Cannot open the web cam" << endl;
-		return -1;
-	}
-	cout << "  Laser uniform tracking for single laser beam" << endl << "--------------------------------------" << endl;
-
-	int previousX = -1;
-	int	previousY = -1;
-	double servoPosX = 0, servoPosY = 0;
-
-	//FANN initialization BEGIN
-	fann_type *calc_out;
-	const unsigned int num_input = 2;
-	const unsigned int num_output = 2;
-	const unsigned int num_layers = 3;
-	const unsigned int num_neurons_hidden = 36;
-
-	unsigned int decimal_point;
-
-	printf("Creating network.\n");
-	ann = fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
-
-	//fann_set_activation_steepness_hidden(ann, 0.5);
-	//fann_set_activation_steepness_output(ann, 0.5);
-
-	fann_set_activation_function_hidden(ann, FANN_LINEAR);
-	fann_set_activation_function_output(ann, FANN_LINEAR);
-
-	fann_set_training_algorithm(ann, FANN_TRAIN_INCREMENTAL);
-	//fann_set_learning_momentum(ann, 0.3);
-	//FANN initialization END
-
-
-
-
-
-	//Capture a temporary image from the camera to get the size
-	//Mat imgTmp;
-	//cam.read(imgTmp);
-	//imshow("Camera View", imgTmp);
-	servoPosX = 0;
-	servoPosY = 0;
-	int step = 5;
-	for (int i = 0; i <=  640; i+step)
-	{
-		for (int j = 0; j <= 480; j + step)
-		{
-			servoPosX = i;
-			servoPosY = j;
-			controller.MoveToServoPos(servoPosX, servoPosY, true);
-		}
-
-	}
-
-}
 
 int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 {
