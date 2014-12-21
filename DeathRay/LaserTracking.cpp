@@ -611,14 +611,14 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 		df = trainer.train(samples, targets);
 
 
-		matrix<double, 2, 1> m;
-			m(0, 0) = m(1, 0) = 25; cout << 25 * 10000 + 25 << "   " << df(m) << endl;
-		
-			m(0, 0) = m(1, 0) = 1; cout << 1 * 10000 + 1 << "   " << df(m) << endl;
-		
-			m(0, 0) = m(1, 0) = -4;  cout << -4 * 10000 + -4 << "   " << df(m) << endl;
-		
-			m(0, 0) = m(1, 0) = 5; cout << 5 * 10000 + 5 << "   " << df(m) << endl;
+		//matrix<double, 2, 1> m;
+		//	m(0, 0) = m(1, 0) = 25; cout << 25 * 10000 + 25 << "   " << df(m) << endl;
+		//
+		//	m(0, 0) = m(1, 0) = 1; cout << 1 * 10000 + 1 << "   " << df(m) << endl;
+		//
+		//	m(0, 0) = m(1, 0) = -4;  cout << -4 * 10000 + -4 << "   " << df(m) << endl;
+		//
+		//	m(0, 0) = m(1, 0) = 5; cout << 5 * 10000 + 5 << "   " << df(m) << endl;
 
 
 
