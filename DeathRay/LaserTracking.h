@@ -36,11 +36,8 @@ public:
 	void Shoot(int x, int y, ServoCtrl controller);
 private:
 	void printHelp();
-	static void onMouse(int event, int x, int y, int, void*);
 	ServoCtrl &controller;
 	cv::VideoCapture cam;
-	static LaserTracking * laser;
-	//bool shootted;
 	int targetX=-1;
 	int targetY=-1;
 	int trackingX = -1;

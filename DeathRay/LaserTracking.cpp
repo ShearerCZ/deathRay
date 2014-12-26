@@ -26,13 +26,11 @@ using namespace cv;
 using namespace dlib;
 using namespace std;
 
-LaserTracking * LaserTracking::laser = NULL;
 LaserTracking::LaserTracking(cv::VideoCapture &camera, ServoCtrl &ctrl, bool daylight)
 	: controller(ctrl)
 {
 	cam = camera;
 	day = daylight;
-	laser = this;
 }
 
 
@@ -79,19 +77,6 @@ void LaserTracking::Shoot(int x, int y, ServoCtrl controller)
 }
 
 
-void LaserTracking::onMouse(int event, int x, int y, int, void*)
-{
-	laser->trackingX = x;
-	laser->trackingY = y;
-
-	if (event == EVENT_LBUTTONDOWN && laser->targetX != x && laser->targetY != y)
-	{
-		laser->targetX = x;
-		laser->targetY = y;
-		laser->Shoot(x, y, laser->controller);
-	}
-}
-
 int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool displayThreshold, bool displayGrayScale)
 {
 	int thresholdLevelL = DEFAULT_THRESHOLD_DAY;
@@ -123,7 +108,7 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 	//Capture a temporary image from the camera to get the size
 	Mat imgTmp;
 	cam.read(imgTmp);
-
+	imshow("Camera View", imgTmp);
 	int iLastX = -1;
 	int iLastY = -1;
 	//Create a black image with the size as the camera output to see the laser tracking
@@ -189,6 +174,7 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 		if (displayGrayScale) imshow("GrayScale", imgbGrayScale);
 		imgOriginal = imgOriginal + imgLines;
 		imshow("Camera View", imgOriginal);
+
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
 			cout << "esc key is pressed by user" << endl;
@@ -242,7 +228,20 @@ int LaserTracking::ShootingRange(ServoCtrl &controller, bool showAdjustWindow, b
 	Mat imgTmp;
 	cam.read(imgTmp);
 	imshow("Camera View", imgTmp);
-	setMouseCallback("Camera View", onMouse);
+	// setting callback for shooting - current object is passed as pointer into the class
+	setMouseCallback("Camera View", [](int event, int x, int y, int flags, void* userData) {
+		LaserTracking* laser = static_cast<LaserTracking*>(userData);
+		laser->trackingX = x;
+		laser->trackingY = y;
+
+		if (event == EVENT_LBUTTONDOWN && laser->targetX != x && laser->targetY != y)
+		{
+			laser->targetX = x;
+			laser->targetY = y;
+			laser->Shoot(x, y, laser->controller);
+		}
+		cout << "mouse at X: " << x << ", Y: " << y << endl;
+	}, this);
 
 	//Starts loop until Escape key is pressed
 	while (true)
