@@ -1,4 +1,18 @@
-#include "stdafx.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/flann/miniflann.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/photo/photo.hpp>
+#include <opencv2/video/video.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core_c.h>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <phidget21.h>
 #include "LaserTracking.h"
 #include <windows.h>
 #include <process.h>
@@ -10,12 +24,13 @@
 
 using namespace cv;
 using namespace dlib;
+using namespace std;
 
 LaserTracking * LaserTracking::laser = NULL;
 LaserTracking::LaserTracking(cv::VideoCapture &camera, ServoCtrl &ctrl, bool daylight)
 	: controller(ctrl)
 {
- 	cam = camera;
+	cam = camera;
 	day = daylight;
 	laser = this;
 }
@@ -109,6 +124,8 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 	Mat imgTmp;
 	cam.read(imgTmp);
 
+	int iLastX = -1;
+	int iLastY = -1;
 	//Create a black image with the size as the camera output to see the laser tracking
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
 	//Starts loop until Escape key is pressed
@@ -144,14 +161,21 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 		double dArea = oMoments.m00;
 
 		//
-		if (dArea >= 100 && dArea < 2000)
+		if (dArea >= 100 && dArea < 10000)
 		{
 			//calculate the position
 			int x = (dM10 / dArea);
 			int y = (dM01 / dArea);
 			cout << "Laser beam pointing to X: " << x << ", Y: " << y << endl;
 			//if last is different draw a new line
-			
+			if (iLastX >= 0 && iLastY >= 0 && x >= 0 && y >= 0)
+			{
+				//Draw a red line from the previous point to the current point
+				line(imgLines, Point(x, y), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
+			}
+
+			iLastX = x;
+			iLastY = y;
 			//draw yellow rectactangle on original image
 			cv::rectangle(imgOriginal,
 				Point(x - 5, y - 5),
@@ -159,28 +183,6 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 				Scalar(80, 240, 255),
 				2,
 				8);
-		}
-
-		if (trackingX >= 0 && trackingY >= 0)
-		{
-			cv::rectangle(imgOriginal,
-				Point(trackingX - 8, trackingY - 8),
-				Point(trackingX + 8, trackingY + 8),
-				Scalar(240, 0, 255),
-				2,
-				8);
-
-		}
-
-		if (targetX >= 0 && targetY >= 0)
-		{
-			cv::rectangle(imgOriginal,
-				Point(targetX - 5, targetY - 5),
-				Point(targetX + 5, targetY + 5),
-				Scalar(80, 0, 255),
-				5,
-				8);
-
 		}
 		//show the thresholded image
 		if (displayThreshold) imshow("Thresholded Image", imgThresholded);
@@ -202,12 +204,11 @@ int LaserTracking::Track(bool showAdjustWindow, bool showCameraSettings, bool di
 			cout << "Clearing the path" << endl;
 		}
 	}
-
 	return 0;
 }
 
 
-int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bool showCameraSettings, bool displayThreshold, bool displayGrayScale)
+int LaserTracking::ShootingRange(ServoCtrl &controller, bool showAdjustWindow, bool showCameraSettings, bool displayThreshold, bool displayGrayScale)
 {
 	int thresholdLevelL = DEFAULT_THRESHOLD_DAY;
 	if (!day) thresholdLevelL = DEFAULT_THRESHOLD_NIGHT_LOW;
@@ -242,7 +243,7 @@ int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bo
 	cam.read(imgTmp);
 	imshow("Camera View", imgTmp);
 	setMouseCallback("Camera View", onMouse);
-	
+
 	//Starts loop until Escape key is pressed
 	while (true)
 	{
@@ -282,7 +283,7 @@ int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bo
 			int x = (dM10 / dArea);
 			int y = (dM01 / dArea);
 			cout << "Laser beam pointing to X: " << x << ", Y: " << y << endl;
-			//if last is different draw a new line
+			//if last is different send calibration info
 			if (previousX >= 0 && previousY >= 0 && x == previousX && y == previousY)
 			{
 				controller.CalibrateCameraPos(1.0*x / 640, 1.0*y / 480);
@@ -336,7 +337,7 @@ int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bo
 		{
 			trackingX = -1;
 			trackingY = -1;
-     		targetX = -1;
+			targetX = -1;
 			targetY = -1;
 			cout << "Clearing the path" << endl;
 		}
@@ -344,7 +345,6 @@ int LaserTracking::ShootingRange(ServoCtrl &controller,bool showAdjustWindow, bo
 
 	return 0;
 }
-
 
 int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 {
@@ -363,7 +363,7 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 		cout << "Cannot open the web cam" << endl;
 		return -1;
 	}
-	cout << "  Laser tracking for single laser beam" << endl << "--------------------------------------" << endl;
+	cout << "  Laser calibration for single laser beam" << endl << "--------------------------------------" << endl;
 
 	//displays the adjust window
 	//create a window for control the accuracy
@@ -383,8 +383,6 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 	const unsigned int num_output = 2;
 	const unsigned int num_layers = 3;
 	const unsigned int num_neurons_hidden = 3;
-
-	unsigned int decimal_point;
 
 	printf("Creating network.\n");
 	ann = fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
@@ -495,10 +493,10 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 
 
 				//FANN feed data BEGIN
-				float in[2] = {floatX, floatY};
+				float in[2] = { floatX, floatY };
 				float servoPosXScaled = (servoPosX - 80) / 70.0;
 				float servoPosYScaled = (servoPosY - 79) / 40.0;
-				float out[2] = {servoPosXScaled, servoPosYScaled};
+				float out[2] = { servoPosXScaled, servoPosYScaled };
 
 				if (even) {
 					fann_train(ann, in, out);
@@ -516,8 +514,8 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 						diffX, diffY);
 				}
 				even = !even;
-				
-				
+
+
 				//FANN feed data END
 
 				// the first thing we do is pick a few training points from the sinc() function.
@@ -558,7 +556,7 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 			{
 				cout << "esc key is pressed by user" << endl;
 				//destroyWindow("Camera View");
-			
+
 				return 1;
 			}
 			if (!visible)
@@ -573,52 +571,52 @@ int LaserTracking::Calibrate(ServoCtrl controller, int nbOfPoints)
 		}
 	}
 
-		// Now setup a SVR trainer object.  It has three parameters, the kernel and
-	
-		// two parameters specific to SVR.
-	
-		svr_trainer<kernel_type> trainer;
-	
-		trainer.set_kernel(kernel_type(0.1));
-	
-	
-	
-		// This parameter is the usual regularization parameter.  It determines the trade-off
-	
-		// between trying to reduce the training error or allowing more errors but hopefully
-	
-		// improving the generalization of the resulting function.  Larger values encourage exact
-	
-		// fitting while smaller values of C may encourage better generalization.
-	
-		trainer.set_c(1000);
-	
-	
-	
-		// Epsilon-insensitive regression means we do regression but stop trying to fit a data
-	
-		// point once it is "close enough" to its target value.  This parameter is the value that
-	
-		// controls what we mean by "close enough".  In this case, I'm saying I'm happy if the
-	
-		// resulting regression function gets within 0.001 of the target value.
-	
-		trainer.set_epsilon_insensitivity(0.001);
-	
-	
-	
-		// Now do the training and save the results
-		df = trainer.train(samples, targets);
+	// Now setup a SVR trainer object.  It has three parameters, the kernel and
+
+	// two parameters specific to SVR.
+
+	svr_trainer<kernel_type> trainer;
+
+	trainer.set_kernel(kernel_type(0.1));
 
 
-		//matrix<double, 2, 1> m;
-		//	m(0, 0) = m(1, 0) = 25; cout << 25 * 10000 + 25 << "   " << df(m) << endl;
-		//
-		//	m(0, 0) = m(1, 0) = 1; cout << 1 * 10000 + 1 << "   " << df(m) << endl;
-		//
-		//	m(0, 0) = m(1, 0) = -4;  cout << -4 * 10000 + -4 << "   " << df(m) << endl;
-		//
-		//	m(0, 0) = m(1, 0) = 5; cout << 5 * 10000 + 5 << "   " << df(m) << endl;
+
+	// This parameter is the usual regularization parameter.  It determines the trade-off
+
+	// between trying to reduce the training error or allowing more errors but hopefully
+
+	// improving the generalization of the resulting function.  Larger values encourage exact
+
+	// fitting while smaller values of C may encourage better generalization.
+
+	trainer.set_c(1000);
+
+
+
+	// Epsilon-insensitive regression means we do regression but stop trying to fit a data
+
+	// point once it is "close enough" to its target value.  This parameter is the value that
+
+	// controls what we mean by "close enough".  In this case, I'm saying I'm happy if the
+
+	// resulting regression function gets within 0.001 of the target value.
+
+	trainer.set_epsilon_insensitivity(0.001);
+
+
+
+	// Now do the training and save the results
+	df = trainer.train(samples, targets);
+
+
+	matrix<double, 2, 1> m;
+	m(0, 0) = m(1, 0) = 25; cout << 25 * 10000 + 25 << "   " << df(m) << endl;
+
+	m(0, 0) = m(1, 0) = 1; cout << 1 * 10000 + 1 << "   " << df(m) << endl;
+
+	m(0, 0) = m(1, 0) = -4;  cout << -4 * 10000 + -4 << "   " << df(m) << endl;
+
+	m(0, 0) = m(1, 0) = 5; cout << 5 * 10000 + 5 << "   " << df(m) << endl;
 
 
 

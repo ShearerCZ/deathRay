@@ -1,6 +1,19 @@
-#ifndef _LASERTRACKING_H__
-#define _LASERTRACKING_H__
-#include "stdafx.h"
+#pragma once 
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/flann/miniflann.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/photo/photo.hpp>
+#include <opencv2/video/video.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core_c.h>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <phidget21.h>
 #include "ServoCtrl.h"
 #include <dlib/svm.h>
 
@@ -36,11 +49,9 @@ private:
 	const int DEFAULT_THRESHOLD_DAY = 185;
 	const int DEFAULT_THRESHOLD_NIGHT_LOW = 105;
 	const int DEFAULT_THRESHOLD_NIGHT_HIGH = 240;
-	const string THRESHOLD_WINDOW_NAME = "Threshold Level";
+	const std::string THRESHOLD_WINDOW_NAME = "Threshold Level";
 	struct fann *ann;
 	decision_function<kernel_type> df;
 
 	//void btCallback(int state, void* userdata);
 };
-
-#endif

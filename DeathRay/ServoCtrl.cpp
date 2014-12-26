@@ -5,7 +5,6 @@
 //  Created by Hackathon on 18/12/14.
 //  Copyright (c) 2014 Hackathon. All rights reserved.
 //
-#include "stdafx.h"
 #include "ServoCtrl.h"
 #include <fstream>
 #include <cmath>
