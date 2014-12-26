@@ -49,6 +49,4 @@ private:
 	const std::string THRESHOLD_WINDOW_NAME = "Threshold Level";
 	struct fann *ann;
 	decision_function<kernel_type> df;
-
-	//void btCallback(int state, void* userdata);
 };

@@ -26,7 +26,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 	//init camera 
-	VideoCapture cap(0); //capture the video from webcam
+	VideoCapture cap{0}; //capture the video from webcam
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
 
@@ -36,9 +36,9 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	PhidgetController pctrl;
-	ServoCtrl ctrl(pctrl, 2, 3);
+	ServoCtrl ctrl{ pctrl, 2, 3 };
 
-	LaserTracking laser(cap, ctrl, true);
+	LaserTracking laser{ cap, ctrl, true};
 	laser.Track();
 
 	//laser.Calibrate(ctrl, 10);
@@ -55,6 +55,6 @@ int main(int argc, char* argv[])
 //int main(int argc,  char* argv[])
 //{
 //	PhidgetController pctrl;
-//	ServoCtrl ctrl(pctrl, 2, 3);
+//	ServoCtrl ctrl{ pctrl, 2, 3 };
 //	return 0;
 //}
